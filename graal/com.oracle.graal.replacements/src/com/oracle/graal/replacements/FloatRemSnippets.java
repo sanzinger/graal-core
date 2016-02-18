@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,7 +21,10 @@
  * questions.
  */
 
-package com.oracle.graal.replacements.aarch64;
+package com.oracle.graal.replacements;
+
+import jdk.vm.ci.code.TargetDescription;
+import jdk.vm.ci.meta.JavaKind;
 
 import com.oracle.graal.api.replacements.SnippetReflectionProvider;
 import com.oracle.graal.graph.Node.NodeIntrinsic;
@@ -32,28 +35,22 @@ import com.oracle.graal.nodes.ValueNode;
 import com.oracle.graal.nodes.calc.RemNode;
 import com.oracle.graal.nodes.spi.LoweringTool;
 import com.oracle.graal.phases.util.Providers;
-import com.oracle.graal.replacements.Snippet;
-import com.oracle.graal.replacements.SnippetTemplate;
 import com.oracle.graal.replacements.SnippetTemplate.Arguments;
-import com.oracle.graal.replacements.Snippets;
-
-import jdk.vm.ci.code.TargetDescription;
-import jdk.vm.ci.meta.JavaKind;
 
 /**
- * AArch64 does not have a remainder operation. We use <code>n % d == n - Truncate(n / d) * d</code>
- * for it instead. This is not correct for some edge cases, so we have to fix it up using these
- * snippets.
+ * These snippets are used as fallback for architectures which don't have a remainder operation
+ * (AARCH64 and SPARC). We use <code>n % d == n - Truncate(n / d) * d</code> for it instead. This is
+ * not correct for some edge cases, so we have to fix it up using these snippets.
  */
-public class AArch64FloatArithmeticSnippets extends SnippetTemplate.AbstractTemplates implements Snippets {
+public class FloatRemSnippets extends SnippetTemplate.AbstractTemplates implements Snippets {
 
     private final SnippetTemplate.SnippetInfo drem;
     private final SnippetTemplate.SnippetInfo frem;
 
-    public AArch64FloatArithmeticSnippets(Providers providers, SnippetReflectionProvider snippetReflection, TargetDescription target) {
+    public FloatRemSnippets(Providers providers, SnippetReflectionProvider snippetReflection, TargetDescription target) {
         super(providers, snippetReflection, target);
-        drem = snippet(AArch64FloatArithmeticSnippets.class, "dremSnippet");
-        frem = snippet(AArch64FloatArithmeticSnippets.class, "fremSnippet");
+        drem = snippet(FloatRemSnippets.class, "dremSnippet");
+        frem = snippet(FloatRemSnippets.class, "fremSnippet");
     }
 
     public void lower(RemNode node, LoweringTool tool) {
@@ -143,5 +140,4 @@ public class AArch64FloatArithmeticSnippets extends SnippetTemplate.AbstractTemp
             super(TYPE, x, y);
         }
     }
-
 }

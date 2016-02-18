@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,17 +24,24 @@ package com.oracle.graal.hotspot.sparc;
 
 import jdk.vm.ci.code.TargetDescription;
 import jdk.vm.ci.hotspot.HotSpotConstantReflectionProvider;
+import jdk.vm.ci.hotspot.HotSpotVMConfig;
 import jdk.vm.ci.meta.MetaAccessProvider;
 
 import com.oracle.graal.compiler.common.spi.ForeignCallsProvider;
+import com.oracle.graal.compiler.common.type.FloatStamp;
 import com.oracle.graal.graph.Node;
 import com.oracle.graal.hotspot.HotSpotGraalRuntimeProvider;
 import com.oracle.graal.hotspot.meta.DefaultHotSpotLoweringProvider;
+import com.oracle.graal.hotspot.meta.HotSpotProviders;
 import com.oracle.graal.hotspot.meta.HotSpotRegistersProvider;
 import com.oracle.graal.nodes.calc.FloatConvertNode;
+import com.oracle.graal.nodes.calc.RemNode;
 import com.oracle.graal.nodes.spi.LoweringTool;
+import com.oracle.graal.replacements.FloatRemSnippets;
 
 public class SPARCHotSpotLoweringProvider extends DefaultHotSpotLoweringProvider {
+
+    private FloatRemSnippets floatRemSnippets;
 
     public SPARCHotSpotLoweringProvider(HotSpotGraalRuntimeProvider runtime, MetaAccessProvider metaAccess, ForeignCallsProvider foreignCalls, HotSpotRegistersProvider registers,
                     HotSpotConstantReflectionProvider constantReflection, TargetDescription target) {
@@ -42,9 +49,17 @@ public class SPARCHotSpotLoweringProvider extends DefaultHotSpotLoweringProvider
     }
 
     @Override
+    public void initialize(HotSpotProviders providers, HotSpotVMConfig config) {
+        super.initialize(providers, config);
+        floatRemSnippets = new FloatRemSnippets(providers, providers.getSnippetReflection(), providers.getCodeCache().getTarget());
+    }
+
+    @Override
     public void lower(Node n, LoweringTool tool) {
         if (n instanceof FloatConvertNode) {
             // FloatConvertNodes are handled in SPARCLIRGenerator.emitConvert
+        } else if (n instanceof RemNode && ((RemNode) n).stamp() instanceof FloatStamp) {
+            floatRemSnippets.lower((RemNode) n, tool);
         } else {
             super.lower(n, tool);
         }
