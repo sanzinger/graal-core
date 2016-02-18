@@ -72,4 +72,12 @@ public class BC_dneg extends JTTTest {
         runTest("test", 7263.8734d, 8263.8734d, 1);
     }
 
+    public static double test2(double a, double b) {
+        return -(a - b);
+    }
+
+    @Test
+    public void run6() throws Throwable {
+        runTest("test2", -1.0d, -1.0d);
+    }
 }
