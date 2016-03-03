@@ -26,6 +26,7 @@ import static com.oracle.graal.asm.sparc.SPARCAssembler.BPCC;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.BPR;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.BR;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.CBCOND;
+import static com.oracle.graal.asm.sparc.SPARCAssembler.getSPARCOp;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.Annul.ANNUL;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.BranchPredict.PREDICT_NOT_TAKEN;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.CC.Xcc;
@@ -34,49 +35,19 @@ import static com.oracle.graal.asm.sparc.SPARCAssembler.ConditionFlag.Equal;
 import static com.oracle.graal.asm.sparc.SPARCAssembler.RCondition.Rc_z;
 import static jdk.vm.ci.sparc.SPARC.g0;
 
-import java.util.EnumSet;
 import java.util.function.Consumer;
 
-import jdk.vm.ci.code.Architecture;
-import jdk.vm.ci.code.TargetDescription;
-import jdk.vm.ci.sparc.SPARC;
-
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import com.oracle.graal.asm.Label;
-import com.oracle.graal.asm.sparc.SPARCAssembler;
 import com.oracle.graal.asm.sparc.SPARCAssembler.ControlTransferOp;
 import com.oracle.graal.asm.sparc.SPARCAssembler.SPARCOp;
-import com.oracle.graal.asm.sparc.SPARCMacroAssembler;
-import com.oracle.graal.test.GraalTest;
 
-public class SPARCAssemblerTest extends GraalTest {
-    private SPARCMacroAssembler masm;
-
-    private static EnumSet<SPARC.CPUFeature> computeFeatures() {
-        EnumSet<SPARC.CPUFeature> features = EnumSet.noneOf(SPARC.CPUFeature.class);
-        features.add(SPARC.CPUFeature.CBCOND);
-        return features;
-    }
-
-    private static TargetDescription createTarget() {
-        final int stackFrameAlignment = 16;
-        final int implicitNullCheckLimit = 4096;
-        final boolean inlineObjects = true;
-        Architecture arch = new SPARC(computeFeatures());
-        return new TargetDescription(arch, true, stackFrameAlignment, implicitNullCheckLimit, inlineObjects);
-    }
-
-    @Before
-    public void setup() {
-        TargetDescription target = createTarget();
-        masm = new SPARCMacroAssembler(target, null);
-    }
+public class SPARCAssemblerTest extends SPARCAssemblerTestBase {
 
     @Test
-    public void testPatchCbcod() {
+    public void testPatchCbcond() {
         testControlTransferOp(l -> CBCOND.emit(masm, CarryClear, false, g0, 3, l), -512, 511);
     }
 
@@ -139,12 +110,12 @@ public class SPARCAssemblerTest extends GraalTest {
         masm.bind(lForward);
 
         int condBack = masm.getInt(backPos);
-        SPARCOp backOp = SPARCAssembler.getSPARCOp(condBack);
+        SPARCOp backOp = getSPARCOp(condBack);
         int dispBack = ((ControlTransferOp) backOp).getDisp(condBack);
         Assert.assertEquals(minDisp, dispBack);
 
         int condFwd = masm.getInt(forwardPos);
-        SPARCOp fwdOp = SPARCAssembler.getSPARCOp(condFwd);
+        SPARCOp fwdOp = getSPARCOp(condFwd);
         int dispFwd = ((ControlTransferOp) fwdOp).getDisp(condFwd);
         Assert.assertEquals(maxDisp, dispFwd);
     }

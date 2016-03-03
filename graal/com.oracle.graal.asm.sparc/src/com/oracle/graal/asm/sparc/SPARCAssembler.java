@@ -187,7 +187,7 @@ public abstract class SPARCAssembler extends Assembler {
     private static final Op2s[] OP2S;
     private static final Op3s[][] OP3S;
 
-    private ArrayList<Integer> delaySlotOptimizationPoints = new ArrayList<>(5);
+    protected ArrayList<Integer> delaySlotOptimizationPoints = new ArrayList<>(5);
 
     static {
         Ops[] ops = Ops.values();
@@ -960,7 +960,7 @@ public abstract class SPARCAssembler extends Assembler {
 
         @Override
         public int setBits(int word, int value) {
-            assert valueFits(value) : "Value: " + value + " does not fit in " + this;
+            assert valueFits(value) : String.format("Value: 0x%x does not fit in %s", value, this);
             return (word & ~mask) | ((value << lowBit) & mask);
         }
 
@@ -1278,7 +1278,7 @@ public abstract class SPARCAssembler extends Assembler {
         }
 
         public int setDisp(int inst, int d) {
-            assert this.match(inst);
+            assert match(inst);
             return this.disp.setBits(inst, d);
         }
 
@@ -1287,7 +1287,13 @@ public abstract class SPARCAssembler extends Assembler {
         }
 
         public int setAnnul(int inst, boolean a) {
+            assert isAnnulable(inst);
             return BitSpec.a.setBits(inst, a ? 1 : 0);
+        }
+
+        public boolean getAnnul(int inst) {
+            assert match(inst);
+            return BitSpec.a.getBits(inst) == 1;
         }
 
         @Override
@@ -1317,6 +1323,7 @@ public abstract class SPARCAssembler extends Assembler {
             inst = BitSpec.cond.setBits(inst, cf.value);
             inst = BitSpec.cc.setBits(inst, cc.value);
             inst = BitSpec.p.setBits(inst, p.flag);
+            masm.delaySlotOptimizationPoints.add(masm.position());
             masm.emitInt(setDisp(inst, masm, lab));
         }
 
@@ -1352,6 +1359,7 @@ public abstract class SPARCAssembler extends Assembler {
             int inst = setBits(0);
             inst = BitSpec.cond.setBits(inst, cond.value);
             inst = BitSpec.a.setBits(inst, a.flag);
+            masm.delaySlotOptimizationPoints.add(masm.position());
             masm.emitInt(setDisp(inst, masm, lab));
         }
     }
@@ -1369,6 +1377,7 @@ public abstract class SPARCAssembler extends Assembler {
             inst = BitSpec.a.setBits(inst, a.flag);
             inst = BitSpec.p.setBits(inst, p.flag);
             inst = BitSpec.rs1.setBits(inst, rs1.encoding);
+            masm.delaySlotOptimizationPoints.add(masm.position());
             masm.emitInt(setDisp(inst, masm, lab));
         }
 
@@ -2790,9 +2799,11 @@ public abstract class SPARCAssembler extends Assembler {
                 int branchTargetInst = getInt(branchTargetAbsolute);
                 SPARCOp branchTargetOp = getSPARCOp(branchTargetInst);
                 if (branchTargetOp instanceof Op3Op) {
+                    int newDisp = disp + 1;
                     Op3s op3 = ((Op3Op) branchTargetOp).getOp3(branchTargetInst);
-                    if (!op3.throwsException()) {
-                        inst = ctOp.setDisp(inst, disp + 1); // Increment the offset
+                    if (!op3.throwsException() && ctOp.isValidDisp(newDisp)) {
+                        // target op does not throw exception and newDisp is within range
+                        inst = ctOp.setDisp(inst, newDisp);
                         inst = ctOp.setAnnul(inst, true);
                         emitInt(inst, i);
                         emitInt(branchTargetInst, delaySlotAbsolute);
