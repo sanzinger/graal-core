@@ -69,4 +69,9 @@ public class BC_iadd extends JTTTest {
         runTest("test", -2147483647, -2);
     }
 
+    @Test
+    public void run7() throws Throwable {
+        runTest("test", -2147483647, -20);
+    }
+
 }
